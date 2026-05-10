@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import json
 import mimetypes
 import subprocess
@@ -13,10 +14,45 @@ HOST = "127.0.0.1"
 PORT = 8765
 
 
-def run_playerctl(*args: str) -> str:
+def get_player() -> str:
+    preferred = os.environ.get("PLAYER")
+    if preferred:
+        return preferred
+
+    players = run_raw_playerctl("-l").splitlines()
+
+    for prefix in ("chromium.instance", "spotify", "vlc", "youtube"):
+        for player in players:
+            if player.startswith(prefix):
+                return player
+
+    return ""
+
+
+def run_raw_playerctl(*args: str) -> str:
     try:
         return subprocess.check_output(
             ["playerctl", *args],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=1.5,
+        ).strip()
+    except Exception:
+        return ""
+
+
+def run_playerctl(*args: str) -> str:
+    player = get_player()
+    cmd = ["playerctl"]
+
+    if player:
+        cmd.append(f"--player={player}")
+
+    cmd.extend(args)
+
+    try:
+        return subprocess.check_output(
+            cmd,
             stderr=subprocess.DEVNULL,
             text=True,
             timeout=1.5,
