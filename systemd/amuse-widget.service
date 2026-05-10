@@ -1,0 +1,12 @@
+[Unit]
+Description=Local OBS music widget
+
+[Service]
+Type=simple
+WorkingDirectory=%h/amuse-local-widget
+ExecStart=/usr/bin/python %h/amuse-local-widget/server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
