@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Now Playing</title>
+  <style>
+    :root {
+      /* Catppuccin Mocha */
+      --base: #1e1e2e;
+      --mantle: #181825;
+      --crust: #11111b;
+      --surface0: #313244;
+      --surface1: #45475a;
+      --text: #cdd6f4;
+      --subtext: #bac2de;
+      --muted: #6c7086;
+      --mauve: #cba6f7;
+      --blue: #89b4fa;
+      --lavender: #b4befe;
+      --pink: #f5c2e7;
+      --green: #a6e3a1;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: "Adwaita Sans", "Inter", "Cantarell", system-ui, sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .widget {
+      width: min(780px, calc(100vw - 48px));
+      min-height: 112px;
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 16px 22px 16px 16px;
+
+      color: var(--text);
+      border-radius: 28px;
+      border: 1px solid rgba(203, 166, 247, 0.32);
+
+      background:
+        linear-gradient(135deg, rgba(203, 166, 247, 0.18), rgba(137, 180, 250, 0.10) 48%, rgba(245, 194, 231, 0.12)),
+        rgba(30, 30, 46, 0.82);
+
+      box-shadow:
+        0 18px 55px rgba(0, 0, 0, 0.42),
+        0 0 32px rgba(203, 166, 247, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+      backdrop-filter: blur(22px) saturate(1.25);
+      -webkit-backdrop-filter: blur(22px) saturate(1.25);
+
+      opacity: 0;
+      transform: translateY(12px) scale(0.985);
+      transition: opacity 280ms ease, transform 280ms ease;
+    }
+
+    .widget.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .cover-wrap {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 22px;
+      padding: 2px;
+      overflow: hidden;
+      flex: 0 0 auto;
+      background: linear-gradient(135deg, var(--mauve), var(--blue), var(--pink));
+      box-shadow:
+        0 8px 26px rgba(0, 0, 0, 0.35),
+        0 0 24px rgba(203, 166, 247, 0.22);
+    }
+
+    .cover {
+      position: absolute;
+      inset: 2px;
+      width: calc(100% - 4px);
+      height: calc(100% - 4px);
+      object-fit: cover;
+      display: block;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 25% 20%, rgba(203, 166, 247, 0.55), transparent 34%),
+        radial-gradient(circle at 75% 70%, rgba(137, 180, 250, 0.45), transparent 36%),
+        var(--surface0);
+    }
+
+    .fallback-icon {
+      position: absolute;
+      inset: 2px;
+      width: calc(100% - 4px);
+      height: calc(100% - 4px);
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 25% 20%, rgba(203, 166, 247, 0.55), transparent 34%),
+        radial-gradient(circle at 75% 70%, rgba(137, 180, 250, 0.45), transparent 36%),
+        var(--surface0);
+      font-size: 38px;
+      color: var(--text);
+    }
+
+    .meta {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .pill {
+      width: fit-content;
+      max-width: 100%;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      color: var(--lavender);
+      background: rgba(180, 190, 254, 0.10);
+      border: 1px solid rgba(180, 190, 254, 0.16);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(166, 227, 161, 0.75);
+    }
+
+    .title-clip,
+    .artist-clip {
+      min-width: 0;
+      overflow: hidden;
+      mask-image: linear-gradient(90deg, #000 0%, #000 88%, transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 88%, transparent 100%);
+    }
+
+    .title {
+      width: max-content;
+      max-width: none;
+      font-size: 28px;
+      line-height: 1.08;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: var(--text);
+      text-shadow: 0 0 18px rgba(203, 166, 247, 0.18);
+      white-space: nowrap;
+    }
+
+    .artist {
+      width: max-content;
+      max-width: none;
+      font-size: 17px;
+      line-height: 1.2;
+      color: var(--subtext);
+      white-space: nowrap;
+    }
+
+    .scroll {
+      animation: marquee 13s linear infinite;
+    }
+
+    @keyframes marquee {
+      0%, 12% { transform: translateX(0); }
+      88%, 100% { transform: translateX(calc(-100% + min(620px, calc(100vw - 178px)))); }
+    }
+
+    .bars {
+      display: inline-flex;
+      gap: 3px;
+      align-items: end;
+      height: 14px;
+    }
+
+    .bars span {
+      width: 3px;
+      border-radius: 999px;
+      background: linear-gradient(var(--mauve), var(--blue));
+      animation: bounce 800ms ease-in-out infinite alternate;
+    }
+
+    .bars span:nth-child(1) { height: 7px; animation-delay: 0ms; }
+    .bars span:nth-child(2) { height: 13px; animation-delay: 120ms; }
+    .bars span:nth-child(3) { height: 9px; animation-delay: 240ms; }
+
+    @keyframes bounce {
+      from { transform: scaleY(0.55); opacity: 0.65; }
+      to { transform: scaleY(1); opacity: 1; }
+    }
+
+    .empty .dot {
+      background: var(--muted);
+      box-shadow: none;
+    }
+
+    .empty .bars span {
+      animation-play-state: paused;
+      opacity: 0.45;
+    }
+  </style>
+</head>
+<body>
+  <main id="widget" class="widget">
+    <div class="cover-wrap">
+      <img id="cover" class="cover" alt="" />
+      <div id="fallback" class="fallback-icon" hidden>♪</div>
+    </div>
+
+    <section class="meta">
+      <div class="pill">
+        <span class="dot"></span>
+        <span id="status">Now playing</span>
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </div>
+
+      <div class="title-clip">
+        <div id="title" class="title">Nothing played</div>
+      </div>
+
+      <div class="artist-clip">
+        <div id="artist" class="artist">Waiting for music…</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const widget = document.getElementById("widget");
+    const title = document.getElementById("title");
+    const artist = document.getElementById("artist");
+    const status = document.getElementById("status");
+    const cover = document.getElementById("cover");
+    const fallback = document.getElementById("fallback");
+
+    function maybeScroll(el) {
+      el.classList.remove("scroll");
+      requestAnimationFrame(() => {
+        const parent = el.parentElement;
+        if (el.scrollWidth > parent.clientWidth + 24) {
+          el.classList.add("scroll");
+        }
+      });
+    }
+
+    function setCover(url) {
+      if (!url) {
+        cover.removeAttribute("src");
+        cover.hidden = true;
+        fallback.hidden = false;
+        return;
+      }
+
+      cover.hidden = false;
+      fallback.hidden = true;
+      cover.src = url;
+      cover.onerror = () => {
+        cover.removeAttribute("src");
+        cover.hidden = true;
+        fallback.hidden = false;
+      };
+    }
+
+    async function update() {
+      try {
+        const res = await fetch("/metadata", { cache: "no-store" });
+        const data = await res.json();
+
+        const playing = data && (data.title || data.artist);
+
+        widget.classList.toggle("empty", !playing);
+        widget.classList.add("visible");
+
+        title.textContent = data.title || "Nothing played";
+        artist.textContent = data.artist || "Waiting for music…";
+        status.textContent = data.status === "Paused" ? "Paused" : playing ? "Now playing" : "Idle";
+
+        setCover(data.artUrl || data.cover || "");
+
+        maybeScroll(title);
+        maybeScroll(artist);
+      } catch (e) {
+        widget.classList.add("visible", "empty");
+        title.textContent = "Widget offline";
+        artist.textContent = "Start server.py";
+        status.textContent = "Offline";
+        setCover("");
+      }
+    }
+
+    update();
+    setInterval(update, 1000);
+    window.addEventListener("resize", () => {
+      maybeScroll(title);
+      maybeScroll(artist);
+    });
+  </script>
+</body>
+</html>
