@@ -4,8 +4,6 @@
 
 Lightweight local “Now Playing” widget for OBS on Linux, inspired by Amuse.
 
-**Made with AI.** This project was developed with AI assistance, including code, documentation, and testing.
-
 Runs locally through `server.py`, while the included `amuse-widget.service` systemd unit allows automatic background startup.
 
 ## Requirements
@@ -137,3 +135,7 @@ node --test tests/widget.test.cjs
 ```
 
 CI runs these checks on Python 3.11, 3.14 and 3.15.
+
+## AI assistance
+
+**Made with AI.** This project was developed with AI assistance, including code, documentation, and testing.
