@@ -22,7 +22,7 @@ sudo pacman -S playerctl
 ## Start
 
 ```sh
-cd ~/amuse-local-widget
+cd ~/Documents/github/amuse-local-widget
 python3 server.py
 ```
 
@@ -38,12 +38,11 @@ http://127.0.0.1:8765
 ## Systemd service
 
 The `systemd/` directory contains the `amuse-widget.service` user unit.
-It expects the repository at `~/amuse-local-widget`; adjust both paths in the
-unit before copying it if you cloned elsewhere.
+It expects the repository at `~/Documents/github/amuse-local-widget`; use the sibling-aware installer from `obs-setup/games/setup-service.fish` to generate a local systemd override automatically if your checkout is elsewhere.
 
 ```sh
 mkdir -p ~/.config/systemd/user
-cp systemd/amuse-widget.service ~/.config/systemd/user/
+cp ~/Documents/github/amuse-local-widget/systemd/amuse-widget.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now amuse-widget.service
 ```
@@ -94,6 +93,24 @@ Environment=PLAYER=spotify
 ```
 
 Then restart with `systemctl --user restart amuse-widget.service`.
+
+### Moving the repository
+
+If the repository is moved, an existing systemd service still points at the old
+`WorkingDirectory` and fails with `status=200/CHDIR`. When both repositories
+are next to each other in `~/Documents/github/`, the recommended fix is:
+
+```fish
+cd ~/Documents/github/obs-setup
+fish ./games/setup-service.fish
+```
+
+The script resolves the sibling `amuse-local-widget` directory, installs a
+`systemd --user` drop-in override (without replacing the existing service),
+reloads and restarts it. Do not use `sudo`: playerctl requires the desktop
+user's D-Bus session. For a standalone checkout, adjust the user unit's paths
+and run `systemctl --user daemon-reload` followed by a restart.
+
 
 The progress bar uses the player's reported position and duration. It freezes
 on pause. When timing is unavailable, it shows an indeterminate bar. Long track
