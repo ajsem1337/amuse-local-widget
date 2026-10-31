@@ -3,8 +3,8 @@ Description=Local OBS music widget
 
 [Service]
 Type=simple
-WorkingDirectory=%h/amuse-local-widget
-ExecStart=/usr/bin/python3 %h/amuse-local-widget/server.py
+WorkingDirectory=%h/Documents/github/amuse-local-widget
+ExecStart=/usr/bin/python3 %h/Documents/github/amuse-local-widget/server.py
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
