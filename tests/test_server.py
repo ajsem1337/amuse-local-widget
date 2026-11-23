@@ -41,6 +41,19 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(data["title"], "Zażółć 🎵")
         self.assertEqual(data["status"], "Paused")
 
+    def test_metadata_uses_one_formatted_query(self):
+        snapshot = "\x1f".join(("Zażółć 🎵", "Artist", "", "", "240000000", "Playing", "61250000"))
+        with patch.object(server, "get_player", return_value="spotify"), patch.object(
+            server, "run_playerctl", return_value=snapshot
+        ) as run:
+            data = server.get_metadata()
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[:3], ("spotify", "metadata", "--format"))
+        self.assertEqual(data, {
+            "title": "Zażółć 🎵", "artist": "Artist", "album": "", "artUrl": "",
+            "status": "Playing", "position": 61.25, "duration": 240,
+        })
+
     def test_unknown_and_invalid_times_are_null(self):
         for value in ("", "NaN", "Infinity", "-1", "not a time"):
             with self.subTest(value=value):

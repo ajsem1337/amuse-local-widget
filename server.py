@@ -110,8 +110,30 @@ def cover_url(url: str) -> str:
     return f"/cover?id={token}"
 
 
+SNAPSHOT_FIELDS = ("xesam:title", "xesam:artist", "xesam:album", "mpris:artUrl",
+                   "mpris:length", "status", "position")
+SNAPSHOT_SEPARATOR = "\x1f"
+
+
 def get_metadata() -> dict[str, object]:
     player = get_player()
+    # One formatted query keeps all fields from the same moment and avoids
+    # starting a process per field. Fall back to per-field queries when the
+    # player cannot answer it, e.g. a player without metadata.
+    snapshot = run_playerctl(player, "metadata", "--format",
+                             SNAPSHOT_SEPARATOR.join(f"{{{{{f}}}}}" for f in SNAPSHOT_FIELDS))
+    parts = [part.strip() for part in snapshot.split(SNAPSHOT_SEPARATOR)]
+    if len(parts) == len(SNAPSHOT_FIELDS):
+        values = dict(zip(SNAPSHOT_FIELDS, parts))
+        return {
+            "title": values["xesam:title"],
+            "artist": values["xesam:artist"],
+            "album": values["xesam:album"],
+            "artUrl": cover_url(values["mpris:artUrl"]),
+            "status": values["status"] or "Stopped",
+            "position": seconds(values["position"], 1_000_000),
+            "duration": seconds(values["mpris:length"], 1_000_000),
+        }
     return {
         "title": run_playerctl(player, "metadata", "xesam:title"),
         "artist": run_playerctl(player, "metadata", "xesam:artist"),
