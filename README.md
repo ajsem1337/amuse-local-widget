@@ -1,10 +1,8 @@
 # Amuse local widget
 
-![Made with AI](https://img.shields.io/badge/Made%20with-AI-76ddcf)
+![Made with AI](https://raw.githubusercontent.com/ajsem1337/ajsem1337/main/assets/made-with-ai.svg)
 
 Lightweight local “Now Playing” widget for OBS on Linux, inspired by Amuse.
-
-Runs locally through `server.py`, while the included `amuse-widget.service` systemd unit allows automatic background startup.
 
 ## Requirements
 
@@ -20,6 +18,8 @@ sudo pacman -S playerctl
 ```
 
 ## Start
+
+Runs locally through `server.py`, while the included `amuse-widget.service` systemd unit allows automatic background startup.
 
 ```sh
 cd ~/Documents/github/amuse-local-widget
@@ -111,7 +111,6 @@ reloads and restarts it. Do not use `sudo`: playerctl requires the desktop
 user's D-Bus session. For a standalone checkout, adjust the user unit's paths
 and run `systemctl --user daemon-reload` followed by a restart.
 
-
 The progress bar uses the player's reported position and duration. It freezes
 on pause. When timing is unavailable, it shows an indeterminate bar. Long track
 names scroll without restarting on every refresh. Reduced motion follows the
@@ -153,6 +152,6 @@ node --test tests/widget.test.cjs
 
 CI runs these checks on Python 3.11, 3.14 and 3.15.
 
-## AI assistance
+---
 
-**Made with AI.** This project was developed with AI assistance, including code, documentation, and testing.
+<p align="center"><sub>Built by <a href="https://github.com/ajsem1337">ajsem</a> with AI assistance.</sub></p>
