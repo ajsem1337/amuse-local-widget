@@ -110,28 +110,30 @@ def cover_url(url: str) -> str:
     return f"/cover?id={token}"
 
 
-SNAPSHOT_FIELDS = ("xesam:title", "xesam:artist", "xesam:album", "mpris:artUrl",
-                   "mpris:length", "status", "position")
-SNAPSHOT_SEPARATOR = "\x1f"
+METADATA_FIELDS = ("xesam:title", "xesam:artist", "xesam:album", "mpris:artUrl", "mpris:length")
+METADATA_SEPARATOR = "\x1f"
+METADATA_MARKER = "amuse"
 
 
 def get_metadata() -> dict[str, object]:
     player = get_player()
-    # One formatted query keeps all fields from the same moment and avoids
-    # starting a process per field. Fall back to per-field queries when the
-    # player cannot answer it, e.g. a player without metadata.
-    snapshot = run_playerctl(player, "metadata", "--format",
-                             SNAPSHOT_SEPARATOR.join(f"{{{{{f}}}}}" for f in SNAPSHOT_FIELDS))
-    parts = [part.strip() for part in snapshot.split(SNAPSHOT_SEPARATOR)]
-    if len(parts) == len(SNAPSHOT_FIELDS):
-        values = dict(zip(SNAPSHOT_FIELDS, parts))
+    # One formatted query replaces a process per metadata field. Status and
+    # position stay separate: the formatter reports a missing position as 0
+    # and lets metadata keys shadow player properties. The markers keep empty
+    # leading/trailing fields intact and detect separators inside values;
+    # anything unexpected falls back to per-field queries.
+    template = METADATA_SEPARATOR.join(
+        [METADATA_MARKER, *(f"{{{{{field}}}}}" for field in METADATA_FIELDS), METADATA_MARKER])
+    parts = run_playerctl(player, "metadata", "--format", template).split(METADATA_SEPARATOR)
+    if len(parts) == len(METADATA_FIELDS) + 2 and parts[0] == parts[-1] == METADATA_MARKER:
+        values = dict(zip(METADATA_FIELDS, (part.strip() for part in parts[1:-1])))
         return {
             "title": values["xesam:title"],
             "artist": values["xesam:artist"],
             "album": values["xesam:album"],
             "artUrl": cover_url(values["mpris:artUrl"]),
-            "status": values["status"] or "Stopped",
-            "position": seconds(values["position"], 1_000_000),
+            "status": run_playerctl(player, "status") or "Stopped",
+            "position": seconds(run_playerctl(player, "position")),
             "duration": seconds(values["mpris:length"], 1_000_000),
         }
     return {

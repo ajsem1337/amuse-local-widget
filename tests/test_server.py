@@ -42,17 +42,34 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(data["status"], "Paused")
 
     def test_metadata_uses_one_formatted_query(self):
-        snapshot = "\x1f".join(("Zażółć 🎵", "Artist", "", "", "240000000", "Playing", "61250000"))
+        snapshot = "\x1f".join(("amuse", "", "Artist", "", "", "240000000", "amuse"))
+        values = {("status",): "Playing", ("position",): "61.25"}
+
+        def run(player, *args):
+            return snapshot if args[:2] == ("metadata", "--format") else values.get(args, "")
+
         with patch.object(server, "get_player", return_value="spotify"), patch.object(
-            server, "run_playerctl", return_value=snapshot
-        ) as run:
+            server, "run_playerctl", side_effect=run
+        ) as mocked:
             data = server.get_metadata()
-        run.assert_called_once()
-        self.assertEqual(run.call_args.args[:3], ("spotify", "metadata", "--format"))
+        self.assertEqual(mocked.call_count, 3)
         self.assertEqual(data, {
-            "title": "Zażółć 🎵", "artist": "Artist", "album": "", "artUrl": "",
+            "title": "", "artist": "Artist", "album": "", "artUrl": "",
             "status": "Playing", "position": 61.25, "duration": 240,
         })
+
+    def test_separator_inside_a_value_falls_back_to_field_queries(self):
+        snapshot = "\x1f".join(("amuse", "", "A\x1fB", "", "", "", "amuse"))
+        values = {("metadata", "xesam:artist"): "A\x1fB"}
+
+        def run(player, *args):
+            return snapshot if args[:2] == ("metadata", "--format") else values.get(args, "")
+
+        with patch.object(server, "get_player", return_value="spotify"), patch.object(
+            server, "run_playerctl", side_effect=run
+        ):
+            data = server.get_metadata()
+        self.assertEqual((data["title"], data["artist"]), ("", "A\x1fB"))
 
     def test_unknown_and_invalid_times_are_null(self):
         for value in ("", "NaN", "Infinity", "-1", "not a time"):
