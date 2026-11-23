@@ -110,8 +110,32 @@ def cover_url(url: str) -> str:
     return f"/cover?id={token}"
 
 
+METADATA_FIELDS = ("xesam:title", "xesam:artist", "xesam:album", "mpris:artUrl", "mpris:length")
+METADATA_SEPARATOR = "\x1f"
+METADATA_MARKER = "amuse"
+
+
 def get_metadata() -> dict[str, object]:
     player = get_player()
+    # One formatted query replaces a process per metadata field. Status and
+    # position stay separate: the formatter reports a missing position as 0
+    # and lets metadata keys shadow player properties. The markers keep empty
+    # leading/trailing fields intact and detect separators inside values;
+    # anything unexpected falls back to per-field queries.
+    template = METADATA_SEPARATOR.join(
+        [METADATA_MARKER, *(f"{{{{{field}}}}}" for field in METADATA_FIELDS), METADATA_MARKER])
+    parts = run_playerctl(player, "metadata", "--format", template).split(METADATA_SEPARATOR)
+    if len(parts) == len(METADATA_FIELDS) + 2 and parts[0] == parts[-1] == METADATA_MARKER:
+        values = dict(zip(METADATA_FIELDS, (part.strip() for part in parts[1:-1])))
+        return {
+            "title": values["xesam:title"],
+            "artist": values["xesam:artist"],
+            "album": values["xesam:album"],
+            "artUrl": cover_url(values["mpris:artUrl"]),
+            "status": run_playerctl(player, "status") or "Stopped",
+            "position": seconds(run_playerctl(player, "position")),
+            "duration": seconds(values["mpris:length"], 1_000_000),
+        }
     return {
         "title": run_playerctl(player, "metadata", "xesam:title"),
         "artist": run_playerctl(player, "metadata", "xesam:artist"),
